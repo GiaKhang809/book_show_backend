@@ -1,0 +1,28 @@
+[{
+  "_id": {
+    "$oid": "60afbb3c6e9c202868e230bf"
+  },
+  "is_admin": true,
+  "is_verify": true,
+  "email": "test1@gmail.com",
+  "firstName": "test1",
+  "lastName": "test1",
+  "password": "$2b$10$8pFNkEqlxd48DJHZjZDj0O3zivZ62Nmowo1NaIqxXuu7aptWvHkOi",
+  "address": "ha noi",
+  "phone_number": "12345678901",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "60afbb5c6e9c202868e230c0"
+  },
+  "is_admin": false,
+  "is_verify": true,
+  "email": "test2@gmail.com",
+  "firstName": "test2",
+  "lastName": "test2",
+  "password": "$2b$10$lbuqFYG2BXmS2nz4E/arJeu8QrDCRuYNT2.0ehKIlpvaXKF.rIMmG",
+  "address": "ha noi viet nam",
+  "phone_number": "1234567890",
+  "__v": 0
+}]

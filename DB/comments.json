@@ -1,0 +1,26 @@
+[{
+  "_id": {
+    "$oid": "60afd4e5f23af73ab07df67f"
+  },
+  "id_user": "60afbb5c6e9c202868e230c0",
+  "date": {
+    "$date": "2025-04-01T17:13:44.192Z"
+  },
+  "id_book": "60afbf783f319427446004ba",
+  "name": "test2",
+  "comment": "halu",
+  "__v": 0
+},
+{
+  "_id": {
+    "$oid": "60afd4ecf23af73ab07df680"
+  },
+  "id_user": "60afbb5c6e9c202868e230c0",
+  "date": {
+    "$date": "2025-04-01T17:13:44.192Z"
+  },
+  "id_book": "60afbf783f319427446004ba",
+  "name": "test2",
+  "comment": "sach hay",
+  "__v": 0
+}]
