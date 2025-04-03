@@ -1,4 +1,5 @@
 'use strict'
+const mongoose = require("mongoose");
 const book = require('../models/book.model');
 const publisherController = require('../controllers/publisher.controller');
 const authorController = require('../controllers/author.controller');
@@ -16,203 +17,133 @@ exports.getTotalPage = (req, res) => {
 }
 
 exports.getAllBook = async (req, res) => {
-    if ((typeof req.body.page === 'undefined')) {
-        res.status(422).json({ msg: 'Invalid data' });
-        return;
-    }
-    //Khoang gia
-    let range = null;
-    let objRange = null;
-    if (typeof req.body.range !== 'undefined') {
-        range = req.body.range;
-        //objRange = JSON.parse(range);
-        objRange = range;
-    }
-    //Search Text
-    let searchText = "";
-    if (typeof req.body.searchtext !== 'undefined') {
-        searchText = req.body.searchtext;
-    }
-    let searchPublisher = null;
-    searchPublisher = await publisherController.getIDBySearchText(searchText);
-    let searchAuthor = null;
-    searchAuthor = await authorController.getIDBySearchText(searchText);
-    let searchCategory = null;
-    searchCategory = await categoryController.getIDBySearchText(searchText);
-    //Sap xep
-    let sortType = "release_date";
-    let sortOrder = "-1";
-    if (typeof req.body.sorttype !== 'undefined') {
-        sortType = req.body.sorttype;
-    }
-    if (typeof req.body.sortorder !== 'undefined') {
-        sortOrder = req.body.sortorder;
-    }
-    if ((sortType !== "price")
-        && (sortType !== "release_date")
-        && (sortType !== "view_counts")
-        && (sortType !== "sales")) {
-        res.status(422).json({ msg: 'Invalid sort type' });
-        return;
-    }
-    if ((sortOrder !== "1")
-        && (sortOrder !== "-1")) {
-        res.status(422).json({ msg: 'Invalid sort order' });
-        return;
-    }
-    //Trang va tong so trang
-    let bookCount = null;
     try {
-        if (range !== null) {
-            bookCount = await book
-                .count({ $or: [{ name: new RegExp(searchText, "i") }, { id_nsx: { $in: searchPublisher } }, { id_author: { $in: searchAuthor } }, { id_category: { $in: searchCategory } }], price: { $gte: objRange.low, $lte: objRange.high } });
-        }
-        else {
-            bookCount = await book.count({ $or: [{ name: new RegExp(searchText, "i") }, { id_nsx: { $in: searchPublisher } }, { id_author: { $in: searchAuthor } }, { id_category: { $in: searchCategory } }] });
-        }
-    }
-    catch (err) {
-        res.status(500).json({ msg: err });
-        return;
-    }
-    let totalPage = parseInt(((bookCount - 1) / 9) + 1);
-    let { page } = req.body;
-    if ((parseInt(page) < 1) || (parseInt(page) > totalPage)) {
-        res.status(200).json({ data: [], msg: 'Invalid page', totalPage });
-        return;
-    }
-    //De sort
-    let sortQuery = {}
-    sortQuery[sortType] = sortOrder;
-    //Lay du lieu
-    if (range !== null) {
-        book
-            .find({ $or: [{ name: new RegExp(searchText, "i") }, { id_nsx: { $in: searchPublisher } }, { id_author: { $in: searchAuthor } }, { id_category: { $in: searchCategory } }], price: { $gte: objRange.low, $lte: objRange.high } })
-            .skip(9 * (parseInt(page) - 1))
-            .limit(9)
-            .sort(sortQuery)
-            .exec((err, docs) => {
-                if (err) {
-                    console.log(err);
-                    res.status(500).json({ msg: err });
-                    return;
-                }
-                res.status(200).json({ data: docs, totalPage });
-            });
-    }
-    else {
-        book
-            .find({ $or: [{ name: new RegExp(searchText, "i") }, { id_nsx: { $in: searchPublisher } }, { id_author: { $in: searchAuthor } }, { id_category: { $in: searchCategory } }] })
-            .skip(9 * (parseInt(page) - 1))
-            .limit(9)
-            .sort(sortQuery)
-            .exec((err, docs) => {
-                if (err) {
-                    console.log(err);
-                    res.status(500).json({ msg: err });
-                    return;
-                }
-                res.status(200).json({ data: docs, totalPage });
-            });
-    }
-}
+        console.log(req.body); // Kiểm tra đầu vào thực tế
+      if ((typeof req.body.page === 'undefined')) {
+        return res.status(422).json({ msg: 'Invalid data' });
+      }
+      const { page, range, searchtext, sorttype, sortorder } = req.body;
+  
+      // Handle Khoang gia (Price Range)
+      let objRange = range || null;
+  
+      // Handle Search Text
+      const searchText = searchtext || "";
+  
+      const searchPublisher = await publisherController.getIDBySearchText(searchText);
+      const searchAuthor = await authorController.getIDBySearchText(searchText);
+      const searchCategory = await categoryController.getIDBySearchText(searchText);
 
-exports.getBookByPublisher = async (req, res) => {
-    if ((typeof req.body.page === 'undefined')
-        || (typeof req.body.id === 'undefined')) {
-        res.status(422).json({ msg: 'Invalid data' });
-        return;
+      // Handle Sort Type and Order
+      let sortType = sorttype || "release_date";
+      let sortOrder = sortorder || "-1";
+      
+      const validSortTypes = ["price", "release_date", "view_counts", "sales"];
+      const validSortOrders = ["1", "-1"];
+  
+      if (!validSortTypes.includes(sortType) || !validSortOrders.includes(sortOrder)) {
+        return res.status(422).json({ msg: 'Invalid sort type or order' });
+      }
+  
+      // Calculate pagination
+      const bookCount = await book.count({
+        $or: [
+          { name: new RegExp(searchText, "i") },
+          { id_nsx: { $in: searchPublisher } },
+          { id_author: { $in: searchAuthor } },
+          { id_category: { $in: searchCategory } }
+        ],
+        ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
+      });
+  
+      const totalPage = Math.ceil(bookCount / 9);
+      
+      if (page < 1 || page > totalPage) {
+        return res.status(200).json({ data: [], msg: 'Invalid page', totalPage });
+      }
+  
+      const sortQuery = { [sortType]: sortOrder };
+  
+      const books = await book
+        .find({
+          $or: [
+            { name: new RegExp(searchText, "i") },
+            { id_nsx: { $in: searchPublisher } },
+            { id_author: { $in: searchAuthor } },
+            { id_category: { $in: searchCategory } }
+          ],
+          ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
+        })
+        .skip(9 * (page - 1))
+        .limit(9)
+        .sort(sortQuery);
+  
+      res.status(200).json({ data: books, totalPage });
+  
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ msg: 'Server error' });
     }
-    let { id, page } = req.body;
-    //Khoang gia
-    let range = null;
-    let objRange = null;
-    if (typeof req.body.range !== 'undefined') {
-        range = req.body.range;
-        //objRange = JSON.parse(range);
-        objRange = range;
-    }
-    //Search Text
-    let searchText = "";
-    if (typeof req.body.searchtext !== 'undefined') {
-        searchText = req.body.searchtext;
-    }
-    //Sap xep
-    let sortType = "release_date";
-    let sortOrder = "-1";
-    if (typeof req.body.sorttype !== 'undefined') {
-        sortType = req.body.sorttype;
-    }
-    if (typeof req.body.sortorder !== 'undefined') {
-        sortOrder = req.body.sortorder;
-    }
-    if ((sortType !== "price")
-        && (sortType !== "release_date")
-        && (sortType !== "view_counts")
-        && (sortType !== "sales")) {
-        res.status(422).json({ msg: 'Invalid sort type' });
-        return;
-    }
-    if ((sortOrder !== "1")
-        && (sortOrder !== "-1")) {
-        res.status(422).json({ msg: 'Invalid sort order' });
-        return;
-    }
-    //Trang va tong so trang
-    let bookCount = null;
+  };
+  
+  exports.getBookByPublisher = async (req, res) => {
     try {
-        if (range !== null) {
-            bookCount = await book
-                .count({ name: new RegExp(searchText, "i"), id_nsx: id, price: { $gte: objRange.low, $lte: objRange.high } });
-        }
-        else {
-            bookCount = await book.count({ name: new RegExp(searchText, "i"), id_nsx: id });
-        }
+      const { id, page, range, searchtext, sorttype, sortorder } = req.body;
+      if (typeof page === 'undefined' || typeof id === 'undefined') {
+        return res.status(422).json({ msg: 'Invalid data' });
+      }
+  
+      // Handle Khoang gia (Price Range)
+      let objRange = range || null;
+  
+      // Handle Search Text
+      const searchText = searchtext || "";
+  
+      // Handle Sort Type and Order
+      let sortType = sorttype || "release_date";
+      let sortOrder = sortorder || "-1";
+      
+      const validSortTypes = ["price", "release_date", "view_counts", "sales"];
+      const validSortOrders = ["1", "-1"];
+  
+      if (!validSortTypes.includes(sortType) || !validSortOrders.includes(sortOrder)) {
+        return res.status(422).json({ msg: 'Invalid sort type or order' });
+      }
+  
+      // Calculate pagination
+      const bookCount = await book.count({
+        name: new RegExp(searchText, "i"),
+        id_nsx: id,
+        ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
+      });
+  
+      const totalPage = Math.ceil(bookCount / 9);
+  
+      if (page < 1 || page > totalPage) {
+        return res.status(200).json({ data: [], msg: 'Invalid page', totalPage });
+      }
+  
+      const sortQuery = { [sortType]: sortOrder };
+  
+      // Fetch the books with pagination and sorting
+      const books = await book
+        .find({
+          name: new RegExp(searchText, "i"),
+          id_nsx: id,
+          ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
+        })
+        .skip(9 * (page - 1))
+        .limit(9)
+        .sort(sortQuery);
+  
+      res.status(200).json({ data: books, totalPage });
+  
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ msg: 'Server error' });
     }
-    catch (err) {
-        res.status(500).json({ msg: err });
-        return;
-    }
-    let totalPage = parseInt(((bookCount - 1) / 9) + 1);
-    if ((parseInt(page) < 1) || (parseInt(page) > totalPage)) {
-        res.status(200).json({ data: [], msg: 'Invalid page', totalPage });
-        return;
-    }
-    //De sort
-    let sortQuery = {}
-    sortQuery[sortType] = sortOrder;
-    //Lay du lieu
-    if (range !== null) {
-        book
-            .find({ name: new RegExp(searchText, "i"), id_nsx: id, price: { $gte: objRange.low, $lte: objRange.high } })
-            .skip(9 * (parseInt(page) - 1))
-            .limit(9)
-            .sort(sortQuery)
-            .exec((err, docs) => {
-                if (err) {
-                    console.log(err);
-                    res.status(500).json({ msg: err });
-                    return;
-                }
-                res.status(200).json({ data: docs, totalPage });
-            });
-    }
-    else {
-        book
-            .find({ name: new RegExp(searchText, "i"), id_nsx: id })
-            .skip(9 * (parseInt(page) - 1))
-            .limit(9)
-            .sort(sortQuery)
-            .exec((err, docs) => {
-                if (err) {
-                    console.log(err);
-                    res.status(500).json({ msg: err });
-                    return;
-                }
-                res.status(200).json({ data: docs, totalPage });
-            });
-    }
-}
+  };
+  
 
 exports.getBookByCategory = async (req, res) => {
     if (typeof req.body.id === 'undefined'
@@ -415,6 +346,7 @@ exports.getBookByID = async (req, res) => {
         res.status(500).json({ msg: err })
         return;
     }
+
     if (result === null) {
         res.status(404).json({ msg: "not found" })
         return;

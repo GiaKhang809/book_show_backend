@@ -4,7 +4,11 @@ const Schema = mongoose.Schema;
 
 const cart = new Schema ({
     id_user: {
-        type: String,
+        type : String,
+        // type: mongoose.Types.ObjectId,
+        // ref: "user",
+        required: true,
+        index: true,
     },
     date: {
         type: Date,
@@ -13,16 +17,24 @@ const cart = new Schema ({
     products: {
         type: [
             {
-                id_category: String,
-                name: String,
-                price: Number,
+                id_category: { 
+                    type : String,
+                    // type: mongoose.Types.ObjectId, ref: "category" 
+                },
+                name: { type: String, required: true, trim: true },
+                price: { type: Number, required: true, min: 0 },
                 release_date: Date,
-                img: String,
+                img: { type: String, required: true },
                 describe: String, 
-                id_nsx: String,
-                id_nsx: String,
-                count: Number,
-                _id: String,
+                id_nsx:{ 
+                    type : String,
+                    // type: mongoose.Types.ObjectId, ref: "publisher" 
+                },
+                count: { type: Number, required: true },
+                _id: { 
+                    type : String,
+                    // type: mongoose.Types.ObjectId, required: true 
+                },
             }
         ],
         required : true,

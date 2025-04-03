@@ -3,39 +3,47 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 const book = new Schema({
     id_category: {
-        type: String,
-        required: [true, "can't be blank"],
+        type : String,
+        // type: mongoose.Types.ObjectId,
+        // ref: "category",
+        required: [true, "category can't be blank"],
         index: true,
     },
     name: {
         type: String,
-        required: [true, "can't be blank"],
-        index: true,
+        required: [true, "name can't be blank"],
+        index: true, // tìm nhanh
     },
     price: {
         type: Number,
-        required: [true, "can't be blank"],
+        required: [true, "price can't be blank"],
     },
     release_date: {
         type: Date,
-        $dateToString: { format: "%Y-%m-%d", date: "$date" },
+        required: [true, "release date can't be blank"],
         default: new Date()
     },
     img: {
         type: String,
-        required: [true, "can't be blank"],
+        required: [true, "img can't be blank"],
     },
     describe: {
-        type: String,
+        type: String, //mô tả
         default: "",
     },
     id_nsx: {
-        type: String,
-        required: [true, "can't be blank"],
+        type : String,
+        // type: mongoose.Types.ObjectId,
+        // ref: "publisher",
+        required: [true, "id nsxnsx can't be blank"],
+        index: true
     },
     id_author: {
-        type: String,
-        required: [true, "can't be blank"],
+        type : String,
+        // type: mongoose.Types.ObjectId,
+        // ref: "author",
+        required: [true, "id authorauthor can't be blank"],
+        index: true
     },
     view_counts: {
         type:Number,

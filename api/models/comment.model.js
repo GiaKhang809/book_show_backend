@@ -4,23 +4,28 @@ const Schema = mongoose.Schema;
 
 const comment = new Schema ({
     id_user: {
-        type: String,
-        default: 'no_user'
+        type : String,
+        // type: mongoose.Types.ObjectId,
+        //  ref: "user" ,
+        // default:'no_user'
     },
     id_book: {
-        type: String,
-        required: [true, "can't be blank"]
+        type : String,
+        // type: mongoose.Types.ObjectId,
+        // ref: "book" ,
+        required: [true, "id book can't be blank"],
     },
     name: {
         type: String,
-        required: [true, "can't be blank"]
+        required: [true, "name can't be blank"]
     },
     comment: {
-        type: String
+        type: String,
+        default: ""
     },
     date: {
         type: Date,
-        default: new Date()
+        default: Date.now
     }
 });
 module.exports = mongoose.model('comment', comment);

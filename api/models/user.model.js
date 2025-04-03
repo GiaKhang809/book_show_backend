@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 const user = new Schema({
   email: {
     type: String,
-    required: [true, "can't be blank"],
+    required: [true, "Email can't be blank"],
     index: true,
     lowercase: true,
     match: [/\S+@\S+\.\S+/, "is invalid"],
@@ -17,7 +17,7 @@ const user = new Schema({
   },
   password: {
     type: String,
-    required: [true, "can't be blank"],
+    required: [true, "password can't be blank"],
   },
   address: {
     type: String,

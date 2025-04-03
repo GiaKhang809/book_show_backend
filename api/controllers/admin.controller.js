@@ -1,11 +1,13 @@
 "use strict";
-var cloudinary = require("cloudinary").v2;
+require('dotenv').config();
+const cloudinary = require('cloudinary').v2;
 var uploads = {};
 cloudinary.config({
-  cloud_name: "ilike",
-  api_key: "678772438397898",
-  api_secret: "zvdEWEfrF38a2dLOtVp-3BulMno",
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+console.log(" Cloudinary configured successfully!");
 
 const book = require("../models/book.model");
 const user = require("../models/user.model");
