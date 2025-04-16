@@ -1,43 +1,49 @@
 'use strict'
 const address = require('../models/address.vn.model');
 exports.getAllCity = async (req, res) => {
-    address.find({}, (err, docs) => {
-        if(err){
-            res.status(500).json({msg: err});
-            return;
+    try{
+        const docs = await address.find({});
+        if (docs.length === 0) {
+            return res.status(404).json({ msg: "Không có dữ liệu thành phố nào." });
         }
-        let data = [];
-        for(let i = 0; i < docs.length; i++) {
-            data.push({name: docs[i].city, code: docs[i].code})
-        }
-        res.status(200).json({data: data})
-    })
-}
+        const data = docs.map(doc => ({
+            name: doc.city,
+            code: doc.code,
+        }));
+        return res.status(200).json({data})
+    }catch (err){
+        console.error("Error getting cities:", err);
+        return res.status(500).json({ msg: "Server error", error: err.message });
+    }
+};
 exports.getAllDistrict = async (req, res) => {
-    address.findOne({code: req.params.code}, (err, docs) => {
-        if(err){
-            res.status(500).json({msg: err});
-            return;
+    try{
+        const docs = await address.findOne({code: req.params.code})
+        if(!docs){
+            return res.status(404).json({ msg: 'Không có thành phố với mã code này.' });
         }
-        let data = [];
-        for(let i = 0; i < docs.district.length; i++) {
-            data.push({name: docs.district[i].name, code: docs.district[i].code})
-        }
-        res.status(200).json({data: data})
-    })
-}
+        const data = docs.district.map(d => ({ 
+            name: d.name, 
+            code: d.code 
+        }));
+         return res.status(200).json({ data });
+    } catch (err) {
+        return res.status(500).json({ msg: err.message });
+    }
+};
 exports.getAllWard = async (req, res) => {
-    address.findOne({code: req.body.codecity}, (err, docs) => {
-        if(err){
-            res.status(500).json({msg: err});
-            return;
+    try{
+        const docs = await address.findOne({code: req.body.codecity});
+        if(!docs){
+            return res.status(404).json({msg: 'Không có thành phố'});
         }
-        let data = [];
-        for(let i = 0; i < docs.district.length; i++) {
-            if(req.body.codedistrict === docs.district[i].code) {
-                    res.status(200).json({data: docs.district[i].ward})
-                    return;
-                }
+        const district = docs.district.find(d => d.code === req.body.codedistrict);
+            if(!district) {
+                return res.status(404).json({msg: 'Quận/Huyện không tồn tại' });
             }
-        })
+            res.status(200).json({ data: district.ward });
+    }catch(err){
+        console.error("Error:", err);
+        return res.status(500).json({msg: err.message});
+    }
 }

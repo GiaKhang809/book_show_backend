@@ -35,6 +35,10 @@ const cart = new Schema ({
                     type : String,
                     // type: mongoose.Types.ObjectId, required: true 
                 },
+                describe: {
+                    type: String, //mô tả
+                    default: "",
+                }
             }
         ],
         required : true,

@@ -4,87 +4,73 @@ const book = require('../models/book.model');
 const publisherController = require('../controllers/publisher.controller');
 const authorController = require('../controllers/author.controller');
 const categoryController = require('../controllers/category.controller');
-
-exports.getTotalPage = (req, res) => {
-    book.find({}, (err, docs) => {
-        if (err) {
-            console.log(err);
-            res.status(500).json({ msg: err });
-            return;
-        }
-        res.status(200).json({ data: parseInt((docs.length - 1) / 9) + 1 })
-    })
-}
+//Xử lý tổng số trang
+exports.getTotalPage = async (req, res) => {
+    try {
+        const count = await book.countDocuments(); // đếm số lượng document thay vì lấy hết
+        const totalPages = Math.ceil(count / 9);   // dùng Math.ceil cho dễ hiểu
+        return res.status(200).json({ data: totalPages });
+    } catch (err) {
+        console.error(err);
+        return res.status(500).json({ msg: err.message || 'Server Error' });
+    }
+};
 
 exports.getAllBook = async (req, res) => {
     try {
-        console.log(req.body); // Kiểm tra đầu vào thực tế
-      if ((typeof req.body.page === 'undefined')) {
+      const { page, range, searchtext = "", sorttype = "release_date", sortorder = "-1" } = req.body;
+  
+      if (typeof page === 'undefined') {
         return res.status(422).json({ msg: 'Invalid data' });
       }
-      const { page, range, searchtext, sorttype, sortorder } = req.body;
   
-      // Handle Khoang gia (Price Range)
-      let objRange = range || null;
-  
-      // Handle Search Text
-      const searchText = searchtext || "";
-  
-      const searchPublisher = await publisherController.getIDBySearchText(searchText);
-      const searchAuthor = await authorController.getIDBySearchText(searchText);
-      const searchCategory = await categoryController.getIDBySearchText(searchText);
-
-      // Handle Sort Type and Order
-      let sortType = sorttype || "release_date";
-      let sortOrder = sortorder || "-1";
-      
       const validSortTypes = ["price", "release_date", "view_counts", "sales"];
       const validSortOrders = ["1", "-1"];
   
-      if (!validSortTypes.includes(sortType) || !validSortOrders.includes(sortOrder)) {
+      if (!validSortTypes.includes(sorttype) || !validSortOrders.includes(sortorder)) {
         return res.status(422).json({ msg: 'Invalid sort type or order' });
       }
   
-      // Calculate pagination
-      const bookCount = await book.count({
+      // Tìm kiếm theo publisher, author, category
+      const [searchPublisher, searchAuthor, searchCategory] = await Promise.all([
+        publisherController.getIDBySearchText(searchtext),
+        authorController.getIDBySearchText(searchtext),
+        categoryController.getIDBySearchText(searchtext),
+      ]);
+  
+      // Tạo query tìm kiếm
+      const searchQuery = {
         $or: [
-          { name: new RegExp(searchText, "i") },
+          { name: new RegExp(searchtext, "i") },
           { id_nsx: { $in: searchPublisher } },
           { id_author: { $in: searchAuthor } },
-          { id_category: { $in: searchCategory } }
+          { id_category: { $in: searchCategory } },
         ],
-        ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
-      });
+        ...(range && { price: { $gte: range.low, $lte: range.high } }),
+      };
   
-      const totalPage = Math.ceil(bookCount / 9);
-      
+      const bookCount = await book.countDocuments(searchQuery);
+      const totalPage = Math.max(1, Math.ceil(bookCount / 9));
+  
       if (page < 1 || page > totalPage) {
         return res.status(200).json({ data: [], msg: 'Invalid page', totalPage });
       }
   
-      const sortQuery = { [sortType]: sortOrder };
+      const sortQuery = { [sorttype]: parseInt(sortorder) };
   
-      const books = await book
-        .find({
-          $or: [
-            { name: new RegExp(searchText, "i") },
-            { id_nsx: { $in: searchPublisher } },
-            { id_author: { $in: searchAuthor } },
-            { id_category: { $in: searchCategory } }
-          ],
-          ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
-        })
+      const books = await book.find(searchQuery)
         .skip(9 * (page - 1))
         .limit(9)
         .sort(sortQuery);
   
-      res.status(200).json({ data: books, totalPage });
+      return res.status(200).json({ data: books, totalPage });
   
     } catch (err) {
       console.error(err);
-      res.status(500).json({ msg: 'Server error' });
+      return res.status(500).json({ msg: 'Server error' });
     }
   };
+  
   
   exports.getBookByPublisher = async (req, res) => {
     try {
@@ -111,7 +97,7 @@ exports.getAllBook = async (req, res) => {
       }
   
       // Calculate pagination
-      const bookCount = await book.count({
+      const bookCount = await book.countDocuments({
         name: new RegExp(searchText, "i"),
         id_nsx: id,
         ...(objRange && { price: { $gte: objRange.low, $lte: objRange.high } })
@@ -215,7 +201,7 @@ exports.getBookByCategory = async (req, res) => {
             .limit(9)
             .skip(9 * (page - 1))
             .sort(sortQuery)
-            .exec((err, docs) => {
+            .find((err, docs) => {
                 if (err) {
                     console.log(err);
                     res.status(500).json({ msg: err });
@@ -228,7 +214,7 @@ exports.getBookByCategory = async (req, res) => {
             .limit(9)
             .skip(9 * (page - 1))
             .sort(sortQuery)
-            .exec((err, docs) => {
+            .find((err, docs) => {
                 if (err) {
                     console.log(err);
                     res.status(500).json({ msg: err });
@@ -308,7 +294,7 @@ exports.getBookByAuthor = async (req, res) => {
             .limit(9)
             .skip(9 * (page - 1))
             .sort(sortQuery)
-            .exec((err, docs) => {
+            .find((err, docs) => {
                 if (err) {
                     console.log(err);
                     res.status(500).json({ msg: err });
@@ -321,7 +307,7 @@ exports.getBookByAuthor = async (req, res) => {
             .limit(9)
             .skip(9 * (page - 1))
             .sort(sortQuery)
-            .exec((err, docs) => {
+            .find((err, docs) => {
                 if (err) {
                     console.log(err);
                     res.status(500).json({ msg: err });
@@ -334,61 +320,62 @@ exports.getBookByAuthor = async (req, res) => {
 
 exports.getBookByID = async (req, res) => {
     if (req.params.id === 'undefined') {
-        res.status(422).json({ msg: 'Invalid data' });
-        return;
+      return res.status(422).json({ msg: 'Invalid data' });
     }
-    let result
+  
     try {
-        result = await book.findById(req.params.id);
+      const result = await book.findById(req.params.id);
+  
+      if (!result) {
+        return res.status(404).json({ msg: "not found" });
+      }
+  
+      result.view_counts += 1;
+  
+      try {
+        await result.save(); // Lưu view mới, không callback
+      } catch (saveErr) {
+        console.log('Error saving view count:', saveErr);
+      }
+  
+      return res.status(200).json({ data: result });
+  
+    } catch (err) {
+      console.log(err);
+      return res.status(500).json({ msg: 'Server error' });
     }
-    catch (err) {
-        console.log(err)
-        res.status(500).json({ msg: err })
-        return;
-    }
+  };
+  
 
-    if (result === null) {
-        res.status(404).json({ msg: "not found" })
-        return;
-    }
-    result.view_counts = result.view_counts + 1;
-    result.save((err, docs) => {
-        if (err) {
-            console.log(err);
-        }
-    });
-    res.status(200).json({ data: result })
-}
-
-exports.getRelatedBook = async (req, res) => {
+  exports.getRelatedBook = async (req, res) => {
     if (typeof req.params.bookId === 'undefined') {
-        res.status(422).json({ msg: 'Invalid data' });
-        return;
+      return res.status(422).json({ msg: 'Invalid data' });
     }
-    let { bookId } = req.params;
-    let bookObj = null;
+  
+    const { bookId } = req.params;
+  
     try {
-        bookObj = await book.findById(bookId);
-    }
-    catch (err) {
-        console.log(err)
-        res.status(500).json({ msg: err })
-        return;
-    }
-    if (bookObj === null) {
-        res.status(200).json({ data: [], msg: 'Invalid bookId' });
-        return;
-    }
-    book
-        .find({ $or: [{ $and: [{ id_category: bookObj.id_category }, { _id: { $nin: [bookId] } }] }, { $and: [{ id_author: bookObj.id_author }, { _id: { $nin: [bookId] } }] }] })
+      const bookObj = await book.findById(bookId);
+  
+      if (!bookObj) {
+        return res.status(200).json({ data: [], msg: 'Invalid bookId' });
+      }
+  
+      const relatedBooks = await book
+        .find({
+          $or: [
+            { $and: [{ id_category: bookObj.id_category }, { _id: { $ne: bookId } }] },
+            { $and: [{ id_author: bookObj.id_author }, { _id: { $ne: bookId } }] },
+          ],
+        })
         .limit(5)
-        .sort({ release_date: -1 })
-        .exec((err, docs) => {
-            if (err) {
-                console.log(err);
-                res.status(500).json({ msg: err });
-                return;
-            }
-            res.status(200).json({ data: docs });
-        });
-}
+        .sort({ release_date: -1 });
+  
+      return res.status(200).json({ data: relatedBooks });
+      
+    } catch (err) {
+      console.error(err);
+      return res.status(500).json({ msg: err.message });
+    }
+  };
+  

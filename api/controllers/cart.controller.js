@@ -63,17 +63,17 @@ exports.addToCart = async (req, res) => {
 };
 exports.getAll = async (req, res) => {
   if (typeof req.params.id_user === "undefined") {
-    res.status(422).json({ msg: "invalid data" });
-    return;
+    return res.status(422).json({ msg: "invalid data" });
   }
-  cart.findOne({ id_user: req.params.id_user }, (err, docs) => {
-    if (err) {
-      res.status(500).json({ msg: err });
-      return;
-    }
+
+  try {
+    const docs = await cart.findOne({ id_user: req.params.id_user });
     res.status(200).json({ data: docs });
-  });
+  } catch (err) {
+    res.status(500).json({ msg: err.message || err });
+  }
 };
+
 exports.update = async (req, res) => {
   if (
     typeof req.body.id_user === "undefined" ||

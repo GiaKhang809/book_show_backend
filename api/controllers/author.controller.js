@@ -43,31 +43,37 @@ exports.getAll = async (req, res) => {
 }
 
 exports.getNameByID = async (req, res) => {
-    if (req.params.id === 'undefined') {
-        return res.status(422).json({ msg: 'Invalid data' });
+    const { id } = req.params;
+  
+    // Kiểm tra xem id có tồn tại trong params hay không
+    if (!id) {
+      return res.status(422).json({ msg: "Invalid data: ID is required" });
     }
-
-    let result;
+  
     try {
-        result = await author.findById(req.params.id);
+      // Tìm tác giả theo ID
+      const authorFound = await author.findById(id);
+  
+      // Kiểm tra xem có tìm thấy tác giả hay không
+      if (!authorFound) {
+        return res.status(404).json({ msg: "Author not found" });
+      }
+  
+      // Trả về tên tác giả nếu tìm thấy
+      res.status(200).json({ name: authorFound.name });
     } catch (err) {
-        console.error(err);
-        return res.status(500).json({ msg: err.message });
+      console.error("Error in getNameByID:", err);
+      res.status(500).json({ msg: "Server error: " + err.message });
     }
-
-    if (result === null) {
-        return res.status(404).json({ msg: "Not found" });
-    }
-
-    res.status(200).json({ name: result.name });
-}
+  };
+  
 
 exports.getAuthor = async (req, res) => {
     try {
-        const docs = await author.find({});
-        res.status(200).json({ data: docs });
+        const authors = await author.find({});
+        res.status(200).json({ data: authors });
     } catch (err) {
-        console.error(err);
+        console.error('Error in getAuthor:', err);
         res.status(500).json({ msg: err.message });
     }
 }

@@ -39,31 +39,31 @@ exports.mycomment = async (req, res) => {
 };
 
 exports.getCommentByIDBook = async (req, res) => {
-  if (
-    typeof req.body.id_book === "undefined" ||
-    typeof req.body.page === "undefined"
-  ) {
-    res.status(422).json({ msg: "Invalid data" });
-    return;
+  try {
+    const { id_book, page } = req.body;
+
+    if (typeof id_book === "undefined" || typeof page === "undefined") {
+      return res.status(422).json({ msg: "Invalid data" });
+    }
+
+    const count = await _comment.countDocuments({ id_book });
+    const totalPage = Math.max(1, Math.ceil(count / 9));
+
+    if (parseInt(page) < 1 || parseInt(page) > totalPage) {
+      return res.status(200).json({ data: [], msg: "Invalid page", totalPage });
+    }
+
+    const comments = await _comment
+      .find({ id_book })
+      .skip(9 * (parseInt(page) - 1))
+      .limit(9)
+      .sort({ date: 1 })
+      .exec();
+
+    return res.status(200).json({ data: comments, totalPage });
+
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ msg: "Server error" });
   }
-  let { id_book, page } = req.body;
-  let count = await _comment.count({ id_book: id_book });
-  let totalPage = parseInt((count - 1) / 9 + 1);
-  if (parseInt(page) < 1 || parseInt(page) > totalPage) {
-    res.status(200).json({ data: [], msg: "Invalid page", totalPage });
-    return;
-  }
-  _comment
-    .find({ id_book: id_book })
-    .skip(9 * (parseInt(page) - 1))
-    .limit(9)
-    .sort({ date: 1 })
-    .exec((err, docs) => {
-      if (err) {
-        console.log(err);
-        res.status(500).json({ msg: err });
-        return;
-      }
-      res.status(200).json({ data: docs, totalPage });
-    });
 };

@@ -7,61 +7,65 @@ const jwt = require("jsonwebtoken");
 const otp = require("../utils/otp");
 
 exports.register = async (req, res) => {
-  if (
-    typeof req.body.email === "undefined" ||
-    typeof req.body.password === "undefined" ||
-    typeof req.body.firstName === "undefined" ||
-    typeof req.body.lastName === "undefined" ||
-    typeof req.body.address === "undefined" ||
-    typeof req.body.phone_number === "undefined"
-  ) {
-    res.status(422).json({ msg: "Invalid data" });
-    return;
+  let { email, password, firstName, lastName, address, phone_number } = req.body;
+   // Kiểm tra dữ liệu thiếu
+   if (!email || !password || !firstName || !lastName || !address || !phone_number) {
+    return res.status(422).json({ msg: "Invalid data" });
   }
-  let { email, password, firstName, lastName, address, phone_number } =
-    req.body;
-  if (
-    (email.indexOf("@") === -1 && email.indexOf(".") === -1) ||
-    password.length < 6
-  ) {
-    res.status(422).json({ msg: "Invalid data" });
-    return;
+  // Kiểm tra email và password
+  if ((email.indexOf("@") === -1 || email.indexOf(".") === -1) || password.length < 6) {
+    return res.status(422).json({ msg: "Invalid data" });
   }
-  let userFind = null;
   try {
-    userFind = await user.find({ email: email });
-  } catch (err) {
-    res.status(500).json({ msg: err });
-    return;
-  }
-  if (userFind.length > 0) {
-    res.status(409).json({ msg: "Email already exist" });
-    return;
-  }
-  const token = randomstring.generate();
-  // let sendEmail = await nodemailer.sendEmail(email, token);
-  // if (!sendEmail) {
-  //     res.status(500).json({ msg: 'Send email fail' });
-  //     return;
-  // }
-  password = bcrypt.hashSync(password, 10);
-  const newUser = new user({
-    email: email,
-    firstName: firstName,
-    lastName: lastName,
-    password: password,
-    address: address,
-    phone_number: phone_number,
-    token: token,
-  });
-  try {
+    const userFind = await user.findOne({ email: email });
+    if(userFind){
+      return res.status(409).json({msg: "Email already exist"})
+    }
+    //  const token = jwt.sign(
+    //   { email },
+    //   process.env.JWT_SECRET || "shhhhh",
+    //   { expiresIn: "1h" }
+    // );
+    const token = randomstring.generate();
+    const sendEmail = await nodemailer.sendEmail(email, token);
+    if (!sendEmail) {
+      return res.status(500).json({ msg: 'Send email fail' });
+    }
+    password = bcrypt.hashSync(password, 10);
+    const newUser = new user({
+      email: email,
+      firstName: firstName,
+      lastName: lastName,
+      password: password,
+      address: address,
+      phone_number: phone_number,
+      token: token,
+    });
     await newUser.save();
+
+    await fetch('https://n8n.mitelai.com/webhook-test/574d6e5c-2fa5-4548-870b-e6d9273e8550', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event: 'new_user_created',
+        user: {
+          id: newUser._id,
+          email,
+          name: `${firstName} ${lastName}`,
+          address,
+          phone_number,
+          is_admin: false,
+          createdAt: new Date().toISOString(),
+          token: token // Gửi luôn token về n8n
+        }
+      })
+    });
+    return res.status(201).json({ msg: "success" });
+
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ msg: err });
-    return;
+    console.error("Register error:", err);
+    return res.status(500).json({ msg: "Internal server error", error: err.message });
   }
-  res.status(201).json({ msg: "success" });
 };
 
 exports.verifyAccount = async (req, res) => {
@@ -163,11 +167,11 @@ exports.requestForgotPassword = async (req, res) => {
     return;
   }
   let token = otp.generateOTP();
-  //   let sendEmail = await nodemailer.sendEmailForgotPassword(email, token);
-  //   if (!sendEmail) {
-  //     res.status(500).json({ msg: "Send email fail" });
-  //     return;
-  //   }
+  let sendEmail = await nodemailer.sendEmailForgotPassword(email, token);
+  if (!sendEmail) {
+      res.status(500).json({ msg: "Send email fail" });
+      return;
+    }
   userFind.token = token;
   try {
     await userFind.save();

@@ -12,7 +12,7 @@ const transporter = nodemailer.createTransport(
 
 exports.sendEmail = async (email, token) => {
     let mailOptions = {
-        from: '"SHOOPER " <khanggia809@gmail.com', // sender address
+        from: '"SHOOPER " <khanggia809@gmail.com>', // sender address
         to: email, // list of receivers
         subject: 'Account Verification Token', // Subject line
         text: 'Hello my friend',
@@ -54,7 +54,7 @@ exports.sendEmailForgotPassword = async (email, token) => {
 }
 exports.sendMailConfirmPayment = async (email, token) => {
     let mailOptions = {
-        from: '"SHOOPER 👻" <kiara966.shippo@gmail.com>', // sender address
+        from: '"SHOOPER " <khanggia809@gmail.com>', // sender address
         to: email, // list of receivers
         subject: 'Payment Verification Token', // Subject line
         text: 'Hello my friend',

@@ -1,5 +1,6 @@
 'use strict'
-const jwt = require('jsonwebtoken');
+
+const  jwt = require('jsonwebtoken');
 exports.verify = async(req, res) => {
     if(typeof req.body.token === 'undefined'
         ||typeof req.body.email === 'undefined'){
